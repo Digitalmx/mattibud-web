@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -36,9 +37,9 @@ class StoreController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'logo_file' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048',
+            'logo_file' => 'nullable|file|max:2048',
             'pdf_file' => 'nullable|file|mimes:pdf|max:10240',
-            'store_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'store_images.*' => 'nullable|image|max:5120',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'latitude' => 'required|numeric|between:-90,90',
@@ -128,9 +129,9 @@ class StoreController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'logo_file' => 'nullable|file|mimes:jpeg,png,jpg,gif|max:2048',
+            'logo_file' => 'nullable|file||max:2048',
             'pdf_file' => 'nullable|file|mimes:pdf|max:10240',
-            'store_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'store_images.*' => 'nullable|image|max:5120',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
             'latitude' => 'required|numeric|between:-90,90',
@@ -139,13 +140,15 @@ class StoreController extends Controller
         ]);
 
         if ($validator->fails()) {
+            Log::debug('Validation failed', [
+                'errors' => $validator->errors()->all()
+            ]);
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
 
         $data = $request->except(['pdf_file', 'logo_file', 'store_images', 'upload_type']);
-        
         // Handle logo file upload
         if ($request->hasFile('logo_file') && $request->file('logo_file')->isValid()) {
             $logo = $request->file('logo_file');
@@ -156,10 +159,9 @@ class StoreController extends Controller
         
         // Update the store data first
         $store->update($data);
-        
         // Handle uploads based on upload type
         $uploadType = $request->input('upload_type', 'images');
-        
+        Log::debug('Upload type', ['upload_type' => $uploadType]);
         if ($uploadType === 'pdf') {
             // Handle PDF file upload
             if ($request->hasFile('pdf_file') && $request->file('pdf_file')->isValid()) {
@@ -170,6 +172,8 @@ class StoreController extends Controller
                 
                 // Process PDF to images
                 $store->processPdfToImages($path);
+            } else {
+                Log::debug('No valid PDF file uploaded');
             }
         } else {
             // Handle multiple store images
@@ -190,9 +194,10 @@ class StoreController extends Controller
                         $sortOrder++;
                     }
                 }
+            } else {
+                Log::debug('No store images uploaded');
             }
         }
-
         return redirect()->route('admin.stores.show', $store)
             ->with('success', 'Store updated successfully.');
     }

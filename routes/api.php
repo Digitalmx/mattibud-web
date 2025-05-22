@@ -24,7 +24,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // Store API Routes
 Route::apiResource('stores', StoreController::class);
 
-// Location API Routes (Google Places API proxies)
+// Location API Routes
+Route::get('/locations/predefined', [LocationController::class, 'predefinedPlaces']);
+Route::get('/locations/predefined-details', [LocationController::class, 'predefinedPlaceDetails']);
+// Original Google Places API proxies (kept for reference)
 Route::get('/locations/autocomplete', [LocationController::class, 'autocomplete']);
 Route::get('/locations/details', [LocationController::class, 'details']);
 
