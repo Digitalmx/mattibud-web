@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Models\StoreImage; // Make sure to import the StoreImage model
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -211,5 +212,28 @@ class StoreController extends Controller
 
         return redirect()->route('admin.stores.index')
             ->with('success', 'Store deleted successfully.');
+    }
+
+    /**
+     * Update the display order of store images.
+     */
+    public function updateImageOrder(Request $request, Store $store)
+    {
+        $request->validate([
+            'image_ids' => 'required|array',
+            'image_ids.*' => 'exists:store_images,id', // Ensure all IDs exist and belong to store_images
+        ]);
+
+        foreach ($request->image_ids as $index => $imageId) {
+            $storeImage = StoreImage::where('id', $imageId)
+                                    ->where('store_id', $store->id) // Ensure image belongs to the store
+                                    ->first();
+            if ($storeImage) {
+                $storeImage->sort_order = $index + 1; // Or just $index if 0-based is preferred
+                $storeImage->save();
+            }
+        }
+
+        return response()->json(['message' => 'Image order updated successfully.']);
     }
 }

@@ -37,5 +37,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('stores', StoreController::class);
         Route::resource('users', UserController::class);
+        Route::post('stores/{store}/update-image-order', [StoreController::class, 'updateImageOrder'])->name('stores.updateImageOrder');
+        Route::delete('stores/{store}/images/{image}', [StoreController::class, 'destroyImage'])->name('stores.images.destroy');
     });
 });

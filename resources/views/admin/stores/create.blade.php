@@ -104,50 +104,27 @@
                         @enderror
                     </div>
                     
-                    <div class="col-md-6">
-                        <label for="city" class="form-label">City</label>
-                        <input type="text" class="form-control @error('city') is-invalid @enderror" id="city" name="city" value="{{ old('city') }}">
-                        @error('city')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    <input type="hidden" id="city" name="city" value="{{ old('city') }}">
                 </div>
                 
                 <div class="mb-3 address-container">
-                    <label for="address" class="form-label">Address</label>
-                    <input type="text" class="form-control @error('address') is-invalid @enderror" id="address" name="address" value="{{ old('address') }}" placeholder="Type to search address...">
+                    <label for="address" class="form-label">Place</label>
+                    <input type="text" class="form-control @error('address') is-invalid @enderror" id="address" name="address" value="{{ old('address') }}" placeholder="Start typing to see suggestions...">
                     <div class="search-results" id="search-results">
                         <ul id="results-list"></ul>
                     </div>
-                    <small class="form-text text-muted">Type to search and select an address to automatically fill coordinates</small>
+                    <small class="form-text text-muted">Select a place from the suggested options</small>
                     @error('address')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="latitude" class="form-label">Latitude <span class="text-danger">*</span></label>
-                        <input type="number" step="any" class="form-control @error('latitude') is-invalid @enderror" id="latitude" name="latitude" value="{{ old('latitude', 59.9139) }}" required>
-                        @error('latitude')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label for="longitude" class="form-label">Longitude <span class="text-danger">*</span></label>
-                        <input type="number" step="any" class="form-control @error('longitude') is-invalid @enderror" id="longitude" name="longitude" value="{{ old('longitude', 10.7522) }}" required>
-                        @error('longitude')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
+                <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude', 59.9139) }}">
+                <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude', 10.7522) }}">
                 
-                <!-- Map for selecting location -->
-                <div class="mb-3">
-                    <label class="form-label">Select Location on Map</label>
+                <!-- Map is now hidden since we don't need lat/lng -->
+                <div style="display:none;">
                     <div id="map"></div>
-                    <small class="text-muted">Click on the map to set latitude and longitude</small>
                 </div>
                 
                 <div class="row mb-3">
@@ -358,16 +335,16 @@
             }
         });
 
-        // Oslo areas quick suggestions
+        // Oslo areas suggestions - restricted to specific locations
         const osloAreas = [
-            { name: 'Oslo Øst', address: 'Strømsveien 196, Alnabru, Oslo', lat: 59.9500, lng: 10.7300 },
-            { name: 'Oslo Vest', address: 'Hoffsveien 10, Skøyen, Oslo', lat: 59.9160, lng: 10.7100 },
-            { name: 'Oslo Sør', address: 'Mortensrudveien 3, Mortensrud, Oslo', lat: 59.8511, lng: 10.8176 },
-            { name: 'Oslo Sentrum', address: 'Karl Johans gate 3, Oslo', lat: 59.9115, lng: 10.7579 },
-            { name: 'Asker og Bærum', address: 'Sandviksveien 184, Sandvika', lat: 59.8313, lng: 10.4176 },
-            { name: 'Nedre Romerike', address: 'Strømsvegen 55, Lillestrøm', lat: 59.9551, lng: 11.0379 },
-            { name: 'Øvre Romerike', address: 'Jessheim Storsenter, Jessheim', lat: 59.9800, lng: 10.9500 },
-            { name: 'Follo', address: 'Ski Storsenter, Ski', lat: 59.7178, lng: 10.8367 }
+            'Oslo Øst',
+            'Oslo Vest',
+            'Oslo Sør',
+            'Oslo Sentrum',
+            'Asker og Bærum',
+            'Nedre Romerike',
+            'Øvre Romerike',
+            'Follo'
         ];
 
         // Search function
@@ -382,41 +359,19 @@
             // Clear previous results
             resultsList.innerHTML = '';
             
-            // Check for matches in Oslo areas first
+            // Check for matches in Oslo areas
             const areaMatches = osloAreas.filter(area => 
-                area.name.toLowerCase().includes(query) || 
-                area.address.toLowerCase().includes(query)
+                area.toLowerCase().includes(query)
             );
             
             if (areaMatches.length > 0) {
                 areaMatches.forEach(result => {
                     const li = document.createElement('li');
-                    li.textContent = result.name + ' - ' + result.address;
+                    li.textContent = result;
                     
                     li.addEventListener('click', function() {
-                        // Fill in address details
-                        addressInput.value = result.address;
-                        
-                        // Set city if it exists in the address
-                        if (result.address.includes('Oslo')) {
-                            cityInput.value = 'Oslo';
-                        } else if (result.address.includes('Sandvika')) {
-                            cityInput.value = 'Sandvika';
-                        } else if (result.address.includes('Lillestrøm')) {
-                            cityInput.value = 'Lillestrøm';
-                        } else if (result.address.includes('Jessheim')) {
-                            cityInput.value = 'Jessheim';
-                        } else if (result.address.includes('Ski')) {
-                            cityInput.value = 'Ski';
-                        }
-
-                        // Set coordinates
-                        document.getElementById('latitude').value = result.lat.toFixed(8);
-                        document.getElementById('longitude').value = result.lng.toFixed(8);
-                        
-                        // Update map view and marker
-                        map.setView([result.lat, result.lng], 16);
-                        marker.setLatLng([result.lat, result.lng]);
+                        // Fill in address/place details
+                        addressInput.value = result;
                         
                         // Hide results
                         searchResults.style.display = 'none';
@@ -428,65 +383,12 @@
                 // Show results
                 searchResults.style.display = 'block';
                 return;
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'No matches found';
+                resultsList.appendChild(li);
+                searchResults.style.display = 'block';
             }
-            
-            // If no matches in predefined areas, use OpenStreetMap Nominatim API
-            // but focus search on Norway
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=no&limit=5`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data && data.length > 0) {
-                        data.forEach(result => {
-                            const li = document.createElement('li');
-                            li.textContent = result.display_name;
-                            
-                            li.addEventListener('click', function() {
-                                // Fill in address details
-                                addressInput.value = result.display_name;
-                                
-                                // Try to extract city from address components
-                                if (result.address) {
-                                    cityInput.value = result.address.city || 
-                                                      result.address.town || 
-                                                      result.address.village || 
-                                                      result.address.municipality || 
-                                                      '';
-                                }
-
-                                // Set coordinates
-                                const resultLat = parseFloat(result.lat);
-                                const resultLng = parseFloat(result.lon);
-                                
-                                // Update inputs
-                                document.getElementById('latitude').value = resultLat.toFixed(8);
-                                document.getElementById('longitude').value = resultLng.toFixed(8);
-                                
-                                // Update map view and marker
-                                map.setView([resultLat, resultLng], 16);
-                                marker.setLatLng([resultLat, resultLng]);
-                                
-                                // Hide results
-                                searchResults.style.display = 'none';
-                            });
-                            
-                            resultsList.appendChild(li);
-                        });
-                        
-                        // Show results
-                        searchResults.style.display = 'block';
-                    } else if (query.length > 3) {
-                        // Only show "no results" for longer queries
-                        const li = document.createElement('li');
-                        li.textContent = 'No results found';
-                        resultsList.appendChild(li);
-                        searchResults.style.display = 'block';
-                    } else {
-                        searchResults.style.display = 'none';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error searching for address:', error);
-                });
         }
     });
 </script>

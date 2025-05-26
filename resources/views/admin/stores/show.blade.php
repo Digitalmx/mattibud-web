@@ -3,13 +3,7 @@
 @section('title', 'Store Details')
 
 @section('styles')
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
-    #map {
-        height: 400px;
-        width: 100%;
-        margin-bottom: 20px;
-    }
     .store-images-gallery {
         display: flex;
         flex-wrap: wrap;
@@ -107,24 +101,13 @@
                         <div class="col-md-4 text-md-end fw-bold">Store Name:</div>
                         <div class="col-md-8">{{ $store->name }}</div>
                     </div>
-                    
-                    <div class="row mb-4">
-                        <div class="col-md-4 text-md-end fw-bold">Address:</div>
+                      <div class="row mb-4">
+                        <div class="col-md-4 text-md-end fw-bold">Place:</div>
                         <div class="col-md-8">{{ $store->address ?: 'Not specified' }}</div>
                     </div>
                     
-                    <div class="row mb-4">
-                        <div class="col-md-4 text-md-end fw-bold">City:</div>
-                        <div class="col-md-8">{{ $store->city ?: 'Not specified' }}</div>
-                    </div>
+                    <!-- City and coordinates are hidden -->
                     
-                    <div class="row mb-4">
-                        <div class="col-md-4 text-md-end fw-bold">Coordinates:</div>
-                        <div class="col-md-8">
-                            Latitude: {{ $store->latitude }}<br>
-                            Longitude: {{ $store->longitude }}
-                        </div>
-                    </div>
                     
                     <div class="row mb-4">
                         <div class="col-md-4 text-md-end fw-bold">Logo URL:</div>
@@ -160,17 +143,13 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Map & Media Card -->
+          <!-- Media Card -->
         <div class="col-lg-6">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Location & Media</h6>
+                    <h6 class="m-0 font-weight-bold text-primary">Store Media</h6>
                 </div>
-                <div class="card-body">
-                    <!-- Store Location Map -->
-                    <h5 class="mb-2">Store Location</h5>
-                    <div id="map" class="mb-4"></div>
+                <div class="card-body">                    <!-- Map is hidden since we don't need to show location -->
                     
                     <!-- Store Logo Preview -->
                     @if($store->logo_url)
@@ -257,25 +236,9 @@
 @endsection
 
 @section('scripts')
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Get existing coordinates
-        let lat = {{ $store->latitude }};
-        let lng = {{ $store->longitude }};
-        
-        // Initialize map
-        const map = L.map('map').setView([lat, lng], 13);
-        
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-        
-        // Add marker at store's location
-        L.marker([lat, lng]).addTo(map)
-            .bindPopup("<b>{{ $store->name }}</b><br>{{ $store->address }}").openPopup();
+        // Map initialization removed since we don't need to show coordinates anymore
             
         // Image lightbox functionality
         const lightbox = document.getElementById('imageLightbox');

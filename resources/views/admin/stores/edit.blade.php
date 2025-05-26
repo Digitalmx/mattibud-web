@@ -54,6 +54,14 @@
         border-radius: 4px;
         padding: 5px;
         width: 150px;
+        cursor: grab; /* Add grab cursor for draggable items */
+    }
+    .store-image-item.sortable-ghost { /* Style for the ghost element during drag */
+        opacity: 0.4;
+        background: #c8ebfb;
+    }
+    .store-image-item.sortable-chosen { /* Style for the chosen element */
+        cursor: grabbing;
     }
     .store-image-item img {
         width: 100%;
@@ -157,50 +165,27 @@
                         @enderror
                     </div>
                     
-                    <div class="col-md-6">
-                        <label for="city" class="form-label">City</label>
-                        <input type="text" class="form-control @error('city') is-invalid @enderror" id="city" name="city" value="{{ old('city', $store->city) }}">
-                        @error('city')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    <input type="hidden" id="city" name="city" value="{{ old('city', $store->city) }}">
                 </div>
                 
                 <div class="mb-3 address-container">
-                    <label for="address" class="form-label">Address</label>
-                    <input type="text" class="form-control @error('address') is-invalid @enderror" id="address" name="address" value="{{ old('address', $store->address) }}" placeholder="Type to search address...">
+                    <label for="address" class="form-label">Place</label>
+                    <input type="text" class="form-control @error('address') is-invalid @enderror" id="address" name="address" value="{{ old('address', $store->address) }}" placeholder="Start typing to see suggestions...">
                     <div class="search-results" id="search-results">
                         <ul id="results-list"></ul>
                     </div>
-                    <small class="form-text text-muted">Search for an address to automatically fill coordinates</small>
+                    <small class="form-text text-muted">Select a place from the suggested options</small>
                     @error('address')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label for="latitude" class="form-label">Latitude <span class="text-danger">*</span></label>
-                        <input type="number" step="any" class="form-control @error('latitude') is-invalid @enderror" id="latitude" name="latitude" value="{{ old('latitude', $store->latitude) }}" required>
-                        @error('latitude')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label for="longitude" class="form-label">Longitude <span class="text-danger">*</span></label>
-                        <input type="number" step="any" class="form-control @error('longitude') is-invalid @enderror" id="longitude" name="longitude" value="{{ old('longitude', $store->longitude) }}" required>
-                        @error('longitude')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
+                <input type="hidden" id="latitude" name="latitude" value="{{ old('latitude', $store->latitude) }}">
+                <input type="hidden" id="longitude" name="longitude" value="{{ old('longitude', $store->longitude) }}">
                 
-                <!-- Map for selecting location -->
-                <div class="mb-3">
-                    <label class="form-label">Select Location on Map</label>
+                <!-- Map is now hidden since we don't need lat/lng -->
+                <div style="display:none;">
                     <div id="map"></div>
-                    <small class="text-muted">Click on the map to set latitude and longitude</small>
                 </div>
                 
                 <div class="row mb-3">
@@ -225,9 +210,9 @@
                 @if($store->images && $store->images->count() > 0)
                 <div class="mb-4">
                     <h5 class="mb-3">Existing Store Images</h5>
-                    <p>These images are currently associated with this store. You can remove any of them.</p>
+                    <p>Drag and drop to reorder images. The new order will be saved automatically.</p>
                     
-                    <div class="store-image-gallery">
+                    <div class="store-image-gallery" id="storeImageGallery">
                         @foreach($store->images as $image)
                             <div class="store-image-item" data-image-id="{{ $image->id }}">
                                 <img src="{{ $image->image_url }}" alt="Store Image">
@@ -310,6 +295,7 @@
 
 @section('scripts')
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Get existing coordinates
@@ -495,16 +481,16 @@
             }
         });
 
-        // Oslo areas quick suggestions
+        // Oslo areas suggestions - restricted to specific locations
         const osloAreas = [
-            { name: 'Oslo Øst', address: 'Strømsveien 196, Alnabru, Oslo', lat: 59.9500, lng: 10.7300 },
-            { name: 'Oslo Vest', address: 'Hoffsveien 10, Skøyen, Oslo', lat: 59.9160, lng: 10.7100 },
-            { name: 'Oslo Sør', address: 'Mortensrudveien 3, Mortensrud, Oslo', lat: 59.8511, lng: 10.8176 },
-            { name: 'Oslo Sentrum', address: 'Karl Johans gate 3, Oslo', lat: 59.9115, lng: 10.7579 },
-            { name: 'Asker og Bærum', address: 'Sandviksveien 184, Sandvika', lat: 59.8313, lng: 10.4176 },
-            { name: 'Nedre Romerike', address: 'Strømsvegen 55, Lillestrøm', lat: 59.9551, lng: 11.0379 },
-            { name: 'Øvre Romerike', address: 'Jessheim Storsenter, Jessheim', lat: 59.9800, lng: 10.9500 },
-            { name: 'Follo', address: 'Ski Storsenter, Ski', lat: 59.7178, lng: 10.8367 }
+            'Oslo Øst',
+            'Oslo Vest',
+            'Oslo Sør',
+            'Oslo Sentrum',
+            'Asker og Bærum',
+            'Nedre Romerike',
+            'Øvre Romerike',
+            'Follo'
         ];
 
         // Search function
@@ -519,41 +505,19 @@
             // Clear previous results
             resultsList.innerHTML = '';
             
-            // Check for matches in Oslo areas first
+            // Check for matches in Oslo areas
             const areaMatches = osloAreas.filter(area => 
-                area.name.toLowerCase().includes(query) || 
-                area.address.toLowerCase().includes(query)
+                area.toLowerCase().includes(query)
             );
             
             if (areaMatches.length > 0) {
                 areaMatches.forEach(result => {
                     const li = document.createElement('li');
-                    li.textContent = result.name + ' - ' + result.address;
+                    li.textContent = result;
                     
                     li.addEventListener('click', function() {
-                        // Fill in address details
-                        addressInput.value = result.address;
-                        
-                        // Set city if it exists in the address
-                        if (result.address.includes('Oslo')) {
-                            cityInput.value = 'Oslo';
-                        } else if (result.address.includes('Sandvika')) {
-                            cityInput.value = 'Sandvika';
-                        } else if (result.address.includes('Lillestrøm')) {
-                            cityInput.value = 'Lillestrøm';
-                        } else if (result.address.includes('Jessheim')) {
-                            cityInput.value = 'Jessheim';
-                        } else if (result.address.includes('Ski')) {
-                            cityInput.value = 'Ski';
-                        }
-
-                        // Set coordinates
-                        document.getElementById('latitude').value = result.lat.toFixed(8);
-                        document.getElementById('longitude').value = result.lng.toFixed(8);
-                        
-                        // Update map view and marker
-                        map.setView([result.lat, result.lng], 16);
-                        marker.setLatLng([result.lat, result.lng]);
+                        // Fill in address/place details
+                        addressInput.value = result;
                         
                         // Hide results
                         searchResults.style.display = 'none';
@@ -565,66 +529,64 @@
                 // Show results
                 searchResults.style.display = 'block';
                 return;
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'No matches found';
+                resultsList.appendChild(li);
+                searchResults.style.display = 'block';
             }
-            
-            // If no matches in predefined areas, use OpenStreetMap Nominatim API
-            // but focus search on Norway
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=no&limit=5`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data && data.length > 0) {
-                        data.forEach(result => {
-                            const li = document.createElement('li');
-                            li.textContent = result.display_name;
-                            
-                            li.addEventListener('click', function() {
-                                // Fill in address details
-                                addressInput.value = result.display_name;
-                                
-                                // Try to extract city from address components
-                                if (result.address) {
-                                    cityInput.value = result.address.city || 
-                                                      result.address.town || 
-                                                      result.address.village || 
-                                                      result.address.municipality || 
-                                                      '';
-                                }
+        }
 
-                                // Set coordinates
-                                const resultLat = parseFloat(result.lat);
-                                const resultLng = parseFloat(result.lon);
-                                
-                                // Update inputs
-                                document.getElementById('latitude').value = resultLat.toFixed(8);
-                                document.getElementById('longitude').value = resultLng.toFixed(8);
-                                
-                                // Update map view and marker
-                                map.setView([resultLat, resultLng], 16);
-                                marker.setLatLng([resultLat, resultLng]);
-                                
-                                // Hide results
-                                searchResults.style.display = 'none';
-                            });
-                            
-                            resultsList.appendChild(li);
-                        });
-                        
-                        // Show results
-                        searchResults.style.display = 'block';
-                    } else {
-                        const li = document.createElement('li');
-                        li.textContent = 'No results found';
-                        resultsList.appendChild(li);
-                        searchResults.style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error searching for address:', error);
-                    const li = document.createElement('li');
-                    li.textContent = 'Error searching for address';
-                    resultsList.appendChild(li);
-                    searchResults.style.display = 'block';
-                });
+        // Image Reordering with SortableJS
+        const imageGallery = document.getElementById('storeImageGallery');
+        if (imageGallery) {
+            new Sortable(imageGallery, {
+                animation: 150, // ms, animation speed moving items when sorting, `0` — without animation
+                ghostClass: 'sortable-ghost', // Class name for the drop placeholder
+                chosenClass: 'sortable-chosen', // Class name for the chosen item
+                dragClass: 'sortable-drag', // Class name for the dragging item
+                onEnd: function (evt) {
+                    const imageIds = [];
+                    imageGallery.querySelectorAll('.store-image-item').forEach(item => {
+                        imageIds.push(item.getAttribute('data-image-id'));
+                    });
+
+                    // Get the CSRF token from the meta tag
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    
+                    fetch('{{ route("admin.stores.updateImageOrder", $store) }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ image_ids: imageIds })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message) {
+                            // Optionally, show a success message (e.g., using a toast notification)
+                            console.log(data.message);
+                            // Add a small visual feedback
+                            const feedback = document.createElement('div');
+                            feedback.textContent = 'Order saved!';
+                            feedback.style.color = 'green';
+                            feedback.style.fontSize = '0.9em';
+                            feedback.style.marginTop = '10px';
+                            imageGallery.parentNode.insertBefore(feedback, imageGallery.nextSibling);
+                            setTimeout(() => feedback.remove(), 2000);
+                        } else {
+                            console.error('Error updating image order.', data);
+                            alert('Error updating image order.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while updating image order.');
+                    });
+                }
+            });
         }
     });
 </script>
