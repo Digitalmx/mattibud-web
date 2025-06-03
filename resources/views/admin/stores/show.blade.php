@@ -119,17 +119,7 @@
                             @endif
                         </div>
                     </div>
-                    
-                    <div class="row mb-4">
-                        <div class="col-md-4 text-md-end fw-bold">PDF URL:</div>
-                        <div class="col-md-8">
-                            @if($store->pdf_url)
-                                <a href="{{ $store->pdf_url }}" target="_blank">{{ $store->pdf_url }}</a>
-                            @else
-                                Not specified
-                            @endif
-                        </div>
-                    </div>
+  
                     
                     <div class="row mb-4">
                         <div class="col-md-4 text-md-end fw-bold">Created At:</div>
@@ -152,20 +142,9 @@
                 <div class="card-body">                    <!-- Map is hidden since we don't need to show location -->
                     
                     <!-- Store Logo Preview -->
-                    @if($store->logo_url)
-                        <h5 class="mb-2">Logo Preview</h5>
+                    @if($store->logo_url)                        <h5 class="mb-2">Logo Preview</h5>
                         <div class="text-center mb-4">
                             <img src="{{ $store->logo_url }}" alt="{{ $store->name }} Logo" class="img-fluid mb-2" style="max-height: 150px;">
-                        </div>
-                    @endif
-                    
-                    <!-- PDF Preview Link -->
-                    @if($store->pdf_url)
-                        <h5 class="mb-2">PDF Flyer</h5>
-                        <div class="text-center mb-4">
-                            <a href="{{ $store->pdf_url }}" class="btn btn-primary" target="_blank">
-                                <i class="fas fa-file-pdf me-1"></i> View PDF Flyer
-                            </a>
                         </div>
                     @endif
                 </div>
