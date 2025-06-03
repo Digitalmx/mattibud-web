@@ -422,6 +422,11 @@
             .then(response => {
                 if (response.ok) {
                     return response.json();
+                } else if (response.status === 405) {
+                    // Handle method not allowed error
+                    return response.json().then(errorData => {
+                        throw new Error(errorData.message || 'Method not allowed. Please use DELETE method.');
+                    });
                 }
                 throw new Error('Network response was not ok: ' + response.statusText);
             })
@@ -435,7 +440,7 @@
             })
             .catch(error => {
                 console.error('Error deleting image:', error);
-                alert('Error deleting image. Please try again.');
+                alert('Error deleting image: ' + error.message);
             });
         }
 

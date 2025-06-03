@@ -38,5 +38,8 @@ Route::get('/stores/{store}/images', [StoreImageController::class, 'getImages'])
 Route::delete('/store-images/{storeImage}', [StoreImageController::class, 'deleteImage']);
 Route::put('/store-images/sort', [StoreImageController::class, 'updateSortOrder']);
 
+// Fallback route to handle incorrect GET requests to delete endpoint
+Route::get('/store-images/{storeImage}', [StoreImageController::class, 'handleIncorrectDeleteRequest']);
+
 // API route for creating, updating, and deleting stores can be protected later
 // Route::middleware('auth:sanctum')->apiResource('stores', StoreController::class)->except(['index', 'show']);

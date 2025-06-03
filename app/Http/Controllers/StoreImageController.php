@@ -6,6 +6,7 @@ use App\Models\Store;
 use App\Models\StoreImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class StoreImageController extends Controller
@@ -94,9 +95,30 @@ class StoreImageController extends Controller
      */
     public function deleteImage(StoreImage $storeImage)
     {
-        $storeImage->delete(); // This will trigger the delete event in the model
-        
-        return response()->json(['message' => 'Image deleted successfully']);
+        try {
+            Log::info('Deleting store image', [
+                'image_id' => $storeImage->id,
+                'store_id' => $storeImage->store_id,
+                'image_path' => $storeImage->image_path
+            ]);
+            
+            $storeImage->delete(); // This will trigger the delete event in the model
+            
+            Log::info('Store image deleted successfully', ['image_id' => $storeImage->id]);
+            
+            return response()->json(['message' => 'Image deleted successfully']);
+        } catch (\Exception $e) {
+            Log::error('Error deleting store image', [
+                'image_id' => $storeImage->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to delete image',
+                'message' => 'An error occurred while deleting the image. Please try again.'
+            ], 500);
+        }
     }
     
     /**
@@ -142,5 +164,26 @@ class StoreImageController extends Controller
                 ];
             })
         ]);
+    }
+    
+    /**
+     * Handle incorrect GET requests to delete endpoint
+     *
+     * @param StoreImage $storeImage
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function handleIncorrectDeleteRequest(StoreImage $storeImage)
+    {
+        return response()->json([
+            'error' => 'Method Not Allowed',
+            'message' => 'To delete store image with ID ' . $storeImage->id . ', use DELETE method instead of GET.',
+            'correct_method' => 'DELETE',
+            'correct_endpoint' => '/api/store-images/' . $storeImage->id,
+            'image_info' => [
+                'id' => $storeImage->id,
+                'store_id' => $storeImage->store_id,
+                'is_from_pdf' => $storeImage->is_from_pdf
+            ]
+        ], 405);
     }
 }
