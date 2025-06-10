@@ -122,6 +122,31 @@ class StoreImageController extends Controller
     }
     
     /**
+     * Delete a store image via web route
+     *
+     * @param StoreImage $storeImage
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function webDeleteImage(StoreImage $storeImage)
+    {
+        try {
+            $store = $storeImage->store;
+            $storeImage->delete();
+            
+            return redirect()->route('admin.stores.edit', $store)
+                ->with('success', 'Image deleted successfully');
+        } catch (\Exception $e) {
+            Log::error('Error deleting store image via web', [
+                'image_id' => $storeImage->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->back()
+                ->with('error', 'Failed to delete image');
+        }
+    }
+    
+    /**
      * Update the sort order of images
      *
      * @param Request $request
