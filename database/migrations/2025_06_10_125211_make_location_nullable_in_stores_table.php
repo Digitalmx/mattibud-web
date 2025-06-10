@@ -18,10 +18,10 @@ return new class extends Migration
             DB::statement('DROP INDEX idx_stores_location ON stores');
         }
         
-        // Alter the location column to be nullable
-        DB::statement('ALTER TABLE stores MODIFY COLUMN location POINT NULL SRID 4326');
+        // Alter the location column to be nullable (MariaDB syntax)
+        DB::statement('ALTER TABLE stores MODIFY COLUMN location POINT NULL');
         
-        // Note: Spatial indexes cannot be created on nullable columns in MySQL
+        // Note: Spatial indexes cannot be created on nullable columns in MySQL/MariaDB
         // We'll skip recreating the index for now since location is not being used
     }
 
@@ -30,8 +30,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Make the location column NOT NULL again first
-        DB::statement('ALTER TABLE stores MODIFY COLUMN location POINT NOT NULL SRID 4326');
+        // Make the location column NOT NULL again first (MariaDB syntax)
+        DB::statement('ALTER TABLE stores MODIFY COLUMN location POINT NOT NULL');
         
         // Recreate the spatial index
         DB::statement('CREATE SPATIAL INDEX idx_stores_location ON stores(location)');
