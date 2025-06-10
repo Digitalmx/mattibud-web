@@ -69,6 +69,7 @@ class StoreController extends Controller
         
         // Handle uploads based on upload type
         $uploadType = $request->input('upload_type', 'images');
+        $pdfConversionSuccess = true; // default to true
         
         if ($uploadType === 'pdf') {
             // Handle PDF file upload
@@ -78,8 +79,8 @@ class StoreController extends Controller
                 $path = $pdf->storeAs('pdfs/stores', $filename, 'public');
                 $store->update(['pdf_path' => $path]);
                 
-                // Process PDF to images
-                $store->processPdfToImages($path);
+                // Process PDF to images and capture success
+                $pdfConversionSuccess = $store->processPdfToImages($path);
             }
         } else {
             // Handle multiple store images
@@ -103,8 +104,13 @@ class StoreController extends Controller
             }
         }
 
+        $message = 'Store created successfully.';
+        if ($uploadType === 'pdf' && !$pdfConversionSuccess) {
+            $message = 'Store created, but PDF conversion failed. Using placeholder images.';
+        }
+
         return redirect()->route('admin.stores.index')
-            ->with('success', 'Store created successfully.');
+            ->with('success', $message);
     }
 
     /**
@@ -162,6 +168,7 @@ class StoreController extends Controller
         $store->update($data);
         // Handle uploads based on upload type
         $uploadType = $request->input('upload_type', 'images');
+        $pdfConversionSuccess = true; // default to true
         Log::debug('Upload type', ['upload_type' => $uploadType]);
         if ($uploadType === 'pdf') {
             // Handle PDF file upload
@@ -171,8 +178,8 @@ class StoreController extends Controller
                 $path = $pdf->storeAs('pdfs/stores', $filename, 'public');
                 $store->update(['pdf_path' => $path]);
                 
-                // Process PDF to images
-                $store->processPdfToImages($path);
+                // Process PDF to images and capture success
+                $pdfConversionSuccess = $store->processPdfToImages($path);
             } else {
                 Log::debug('No valid PDF file uploaded');
             }
@@ -199,8 +206,14 @@ class StoreController extends Controller
                 Log::debug('No store images uploaded');
             }
         }
+
+        $message = 'Store updated successfully.';
+        if ($uploadType === 'pdf' && !$pdfConversionSuccess) {
+            $message = 'Store updated, but PDF conversion failed. Using placeholder images.';
+        }
+
         return redirect()->route('admin.stores.show', $store)
-            ->with('success', 'Store updated successfully.');
+            ->with('success', $message);
     }
 
     /**

@@ -5,6 +5,15 @@
 
     RewriteEngine On
 
+    # Allow HTTP Methods (PUT, DELETE, PATCH)
+    # This is needed for RESTful APIs
+    <Limit GET POST>
+        Require all granted
+    </Limit>
+    <LimitExcept GET POST>
+        Require all granted
+    </LimitExcept>
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
@@ -60,7 +61,16 @@ class StoreImage extends Model
     {
         static::deleting(function ($storeImage) {
             if (!is_null($storeImage->image_path)) {
-                Storage::disk('public')->delete($storeImage->image_path);
+                try {
+                    // Check if file exists before deleting
+                    if (Storage::disk('public')->exists($storeImage->image_path)) {
+                        Storage::disk('public')->delete($storeImage->image_path);
+                    } else {
+                        Log::warning("File not found: {$storeImage->image_path}");
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Failed to delete image file: {$storeImage->image_path}. Error: " . $e->getMessage());
+                }
             }
         });
     }

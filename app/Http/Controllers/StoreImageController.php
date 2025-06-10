@@ -93,9 +93,11 @@ class StoreImageController extends Controller
      * @param StoreImage $storeImage
      * @return \Illuminate\Http\JsonResponse
      */
-    public function deleteImage(StoreImage $storeImage)
+    public function deleteImage($storeImageId)
     {
         try {
+            $storeImage = StoreImage::findOrFail($storeImageId);
+            
             Log::info('Deleting store image', [
                 'image_id' => $storeImage->id,
                 'store_id' => $storeImage->store_id,
@@ -109,7 +111,7 @@ class StoreImageController extends Controller
             return response()->json(['message' => 'Image deleted successfully']);
         } catch (\Exception $e) {
             Log::error('Error deleting store image', [
-                'image_id' => $storeImage->id,
+                'image_id' => $storeImageId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

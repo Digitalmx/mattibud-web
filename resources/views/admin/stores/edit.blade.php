@@ -410,6 +410,7 @@
             // Get the CSRF token from the meta tag
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             
+            // First try DELETE method
             fetch(`/api/store-images/${imageId}`, {
                 method: 'DELETE',
                 headers: {
@@ -423,10 +424,9 @@
                 if (response.ok) {
                     return response.json();
                 } else if (response.status === 405) {
-                    // Handle method not allowed error
-                    return response.json().then(errorData => {
-                        throw new Error(errorData.message || 'Method not allowed. Please use DELETE method.');
-                    });
+                    // If DELETE is not allowed, fall back to POST method
+                    console.log('DELETE method not allowed, trying POST fallback...');
+                    return deleteStoreImageFallback(imageId, csrfToken);
                 }
                 throw new Error('Network response was not ok: ' + response.statusText);
             })
@@ -441,6 +441,25 @@
             .catch(error => {
                 console.error('Error deleting image:', error);
                 alert('Error deleting image: ' + error.message);
+            });
+        }
+
+        function deleteStoreImageFallback(imageId, csrfToken) {
+            // Fallback method using POST for servers that block DELETE
+            return fetch(`/api/store-images/${imageId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Fallback POST method also failed: ' + response.statusText);
             });
         }
 

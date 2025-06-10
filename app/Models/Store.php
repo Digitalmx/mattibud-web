@@ -134,7 +134,7 @@ class Store extends Model
      * Process PDF file and convert each page to an image
      *
      * @param string $pdfPath Path to the PDF file in storage
-     * @return void
+     * @return bool True if conversion succeeded, false if fallback was used
      */
     public function processPdfToImages($pdfPath)
     {
@@ -142,18 +142,11 @@ class Store extends Model
             // Force PHP to refresh its extension list
             clearstatcache(true);
             
-            // Check if Imagick is properly loaded
-            if (!extension_loaded('imagick')) {
-                Log::warning('Imagick extension is not loaded - using fallback method for PDF conversion');
+            // Check system requirements
+            if (!$this->checkSystemRequirements()) {
+                Log::warning('System requirements not met - using fallback method for PDF conversion');
                 $this->processPdfWithFallback($pdfPath);
-                return;
-            }
-            
-            // Check if the Imagick class exists
-            if (!class_exists('Imagick')) {
-                Log::warning('Imagick class does not exist - using fallback method for PDF conversion');
-                $this->processPdfWithFallback($pdfPath);
-                return;
+                return false;
             }
             
             Log::info('Starting PDF to image conversion with Imagick: ' . $pdfPath);
@@ -170,7 +163,7 @@ class Store extends Model
             // Try direct Imagick approach first (more reliable than the third-party packages)
             try {
                 $this->convertPdfWithNativeImagick($absolutePath, $pdfPath);
-                return;
+                return true;
             } catch (\Exception $e) {
                 Log::warning('Native Imagick conversion failed, trying alternate method: ' . $e->getMessage());
                 // Continue with alternative approach
@@ -180,7 +173,9 @@ class Store extends Model
             try {
                 if ($this->canUseExec()) {
                     $this->convertPdfWithSystemTools($absolutePath, $pdfPath);
-                    return;
+                    return true;
+                } else {
+                    throw new \Exception('exec function is disabled');
                 }
             } catch (\Exception $e) {
                 Log::warning('System tools conversion failed: ' . $e->getMessage());
@@ -189,6 +184,7 @@ class Store extends Model
             
             // If all else fails, use a simple approach to extract PDF content
             $this->convertPdfWithPurePhp($absolutePath, $pdfPath);
+            return true;
             
         } catch (\Exception $e) {
             // Log the error
@@ -197,7 +193,38 @@ class Store extends Model
             
             // Try fallback method with placeholders
             $this->processPdfWithFallback($pdfPath);
+            return false;
         }
+    }
+    
+    /**
+     * Check system requirements for PDF conversion
+     *
+     * @return bool True if requirements are met
+     */
+    private function checkSystemRequirements()
+    {
+        // Check if Imagick is properly loaded
+        if (!extension_loaded('imagick')) {
+            Log::warning('Imagick extension is not installed');
+            return false;
+        }
+        
+        // Check if the Imagick class exists
+        if (!class_exists('Imagick')) {
+            Log::warning('Imagick class does not exist');
+            return false;
+        }
+        
+        // Check for Ghostscript on Windows
+        if ($this->isWindows()) {
+            if (!$this->commandExists('gswin64c') && !$this->commandExists('gswin32c') && !$this->commandExists('gs')) {
+                Log::warning('Ghostscript not found. Please install Ghostscript for PDF conversion.');
+                return false;
+            }
+        }
+        
+        return true;
     }
     
     /**
@@ -205,12 +232,23 @@ class Store extends Model
      * 
      * @return bool
      */
-    private function canUseExec() 
+    private function isWindows()
+    {
+        return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+    }
+    
+    private function canUseExec()
     {
         // Check if exec is available and not disabled
         if (function_exists('exec') && !in_array('exec', explode(',', ini_get('disable_functions')))) {
             return true;
         }
+        
+        // On Windows, also check shell_exec
+        if ($this->isWindows() && function_exists('shell_exec') && !in_array('shell_exec', explode(',', ini_get('disable_functions')))) {
+            return true;
+        }
+        
         return false;
     }
     
@@ -221,10 +259,21 @@ class Store extends Model
      * @param string $pdfPath Storage path to the PDF file
      * @return void
      */
-    private function convertPdfWithSystemTools($absolutePath, $pdfPath) 
+    private function convertPdfWithSystemTools($absolutePath, $pdfPath)
     {
         // First, try to count pages using pdfinfo if available
         $pageCount = 0;
+        $toolsAvailable = false;
+        
+        // Check if any required tools are available
+        if ($this->commandExists('pdfinfo') || $this->commandExists('pdftk') || $this->commandExists('pdftoppm') || $this->commandExists('gs')) {
+            $toolsAvailable = true;
+        }
+        
+        if (!$toolsAvailable) {
+            Log::warning('No PDF conversion tools found (pdfinfo, pdftk, pdftoppm, gs)');
+            throw new \Exception('No PDF conversion tools available');
+        }
         
         // Try with pdfinfo (from poppler-utils)
         if ($this->commandExists('pdfinfo')) {
@@ -266,8 +315,7 @@ class Store extends Model
         
         Log::info("PDF has $pageCount pages, converting using system tools");
         
-        // Try converting with different tools, starting with pdftoppm (from poppler-utils)
-        $success = false;
+        $anyPageConverted = false;
         
         for ($pageNumber = 1; $pageNumber <= $pageCount; $pageNumber++) {
             $imageName = 'stores/' . $this->id . '/pdf-page-' . $pageNumber . '-' . time() . '.jpg';
@@ -283,7 +331,7 @@ class Store extends Model
             // Try pdftoppm first (from poppler-utils)
             if ($this->commandExists('pdftoppm') && !$success) {
                 // Generate JPG from PDF page
-                $command = "pdftoppm -jpeg -f $pageNumber -l $pageNumber -r 150 \"$absolutePath\" \"" . 
+                $command = "pdftoppm -jpeg -f $pageNumber -l $pageNumber -r 150 \"$absolutePath\" \"" .
                             pathinfo($imagePath, PATHINFO_DIRNAME) . '/' . pathinfo($imagePath, PATHINFO_FILENAME) . "\"";
                 
                 exec($command, $output, $returnVar);
@@ -291,7 +339,7 @@ class Store extends Model
                 // Check if the command succeeded and created the file
                 if ($returnVar === 0) {
                     // pdftoppm creates files with -1.jpg suffix, rename to our desired name
-                    $pdftoppmPath = pathinfo($imagePath, PATHINFO_DIRNAME) . '/' . 
+                    $pdftoppmPath = pathinfo($imagePath, PATHINFO_DIRNAME) . '/' .
                                     pathinfo($imagePath, PATHINFO_FILENAME) . '-1.jpg';
                     
                     if (file_exists($pdftoppmPath)) {
@@ -302,14 +350,31 @@ class Store extends Model
             }
 
             // Try Ghostscript if pdftoppm failed
-            if ($this->commandExists('gs') && !$success) {
-                $command = "gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r150 -dFirstPage=$pageNumber -dLastPage=$pageNumber " .
+            $gsCommand = $this->isWindows() ? 'gswin64c' : 'gs';
+            if ($this->commandExists($gsCommand) && !$success) {
+                $command = "$gsCommand -dNOPAUSE -dBATCH -sDEVICE=jpeg -r150 -dFirstPage=$pageNumber -dLastPage=$pageNumber " .
                            "-sOutputFile=\"$imagePath\" \"$absolutePath\" 2>&1";
                 
                 exec($command, $output, $returnVar);
                 
                 if ($returnVar === 0 && file_exists($imagePath)) {
                     $success = true;
+                } else {
+                    Log::error("Ghostscript conversion failed: " . implode("\n", $output));
+                    
+                    // If on Windows, also try 'gs' as a fallback
+                    if ($this->isWindows() && $gsCommand === 'gswin64c' && $this->commandExists('gs')) {
+                        Log::warning('Trying fallback to gs command on Windows');
+                        $command = "gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -r150 -dFirstPage=$pageNumber -dLastPage=$pageNumber " .
+                                   "-sOutputFile=\"$imagePath\" \"$absolutePath\" 2>&1";
+                        exec($command, $output, $returnVar);
+                        
+                        if ($returnVar === 0 && file_exists($imagePath)) {
+                            $success = true;
+                        } else {
+                            Log::error('Fallback gs command also failed: ' . implode("\n", $output));
+                        }
+                    }
                 }
             }
 
@@ -322,9 +387,14 @@ class Store extends Model
                     'sort_order' => $pageNumber,
                 ]);
                 Log::info('Successfully processed page ' . $pageNumber . ' using system tools');
+                $anyPageConverted = true;
             } else {
                 Log::warning('Failed to convert page ' . $pageNumber . ' using system tools, skipping image creation.');
             }
+        }
+        
+        if (!$anyPageConverted) {
+            throw new \Exception('Failed to convert any pages using system tools');
         }
     }
     

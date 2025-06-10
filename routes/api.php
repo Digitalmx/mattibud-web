@@ -35,7 +35,9 @@ Route::get('/locations/details', [LocationController::class, 'details']);
 Route::post('/stores/{store}/images', [StoreImageController::class, 'uploadImage']);
 Route::post('/stores/{store}/pdf', [StoreImageController::class, 'uploadPdf']);
 Route::get('/stores/{store}/images', [StoreImageController::class, 'getImages']);
-Route::delete('/store-images/{storeImage}', [StoreImageController::class, 'deleteImage']);
+Route::delete('/store-images/{storeImageId}', [StoreImageController::class, 'deleteImage']);
+// Alternative POST route for servers that block DELETE method
+Route::post('/store-images/{storeImageId}/delete', [StoreImageController::class, 'deleteImage']);
 Route::put('/store-images/sort', [StoreImageController::class, 'updateSortOrder']);
 
 // Fallback route to handle incorrect GET requests to delete endpoint
