@@ -216,7 +216,10 @@
                         @foreach($store->images as $image)
                             <div class="store-image-item" data-image-id="{{ $image->id }}">
                                 <img src="{{ $image->image_url }}" alt="Store Image">
-                                <button type="button" class="delete-btn delete-store-image" data-image-id="{{ $image->id }}">
+                                <button type="button" class="delete-btn delete-image-btn" 
+                                        data-store-id="{{ $store->id }}" 
+                                        data-image-id="{{ $image->id }}"
+                                        onclick="deleteImage({{ $store->id }}, {{ $image->id }})">
                                     <i class="fas fa-times"></i>
                                 </button>
                                 @if($image->is_from_pdf)
@@ -274,9 +277,7 @@
                                     <div class="alert alert-info">
                                         <strong>Note:</strong> Uploading a new PDF will replace the current one and all its associated images.
                                     </div>
-                                    <a href="{{ $store->pdf_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-file-pdf me-1"></i> View Current PDF
-                                    </a>
+
                                 </div>
                             @endif
                         </div>
@@ -291,6 +292,15 @@
             </form>
         </div>
     </div>
+
+    <!-- Hidden forms for image deletion (outside main form to avoid nesting) -->
+    @if($store->images && $store->images->count() > 0)
+        @foreach($store->images as $image)
+            <form id="delete-form-{{ $image->id }}" action="{{ route('admin.stores.images.destroy', ['store' => $store->id, 'storeImage' => $image->id]) }}" method="POST" style="display: none;">
+                @csrf
+            </form>
+        @endforeach
+    @endif
 @endsection
 
 @section('scripts')
@@ -395,74 +405,6 @@
             }
         }
         
-        // Delete existing store images
-        const deleteButtons = document.querySelectorAll('.delete-store-image');
-        deleteButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const imageId = this.getAttribute('data-image-id');
-                if (confirm('Are you sure you want to delete this image?')) {
-                    deleteStoreImage(imageId, this);
-                }
-            });
-        });
-        
-        function deleteStoreImage(imageId, buttonElement) {
-            // Get the CSRF token from the meta tag
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            
-            // First try DELETE method
-            fetch(`/api/store-images/${imageId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                credentials: 'same-origin' // Important for cookies/session handling
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else if (response.status === 405) {
-                    // If DELETE is not allowed, fall back to POST method
-                    console.log('DELETE method not allowed, trying POST fallback...');
-                    return deleteStoreImageFallback(imageId, csrfToken);
-                }
-                throw new Error('Network response was not ok: ' + response.statusText);
-            })
-            .then(data => {
-                // Remove the image item from DOM
-                const imageItem = buttonElement.closest('.store-image-item');
-                imageItem.remove();
-                
-                // Show success message
-                alert('Image deleted successfully');
-            })
-            .catch(error => {
-                console.error('Error deleting image:', error);
-                alert('Error deleting image: ' + error.message);
-            });
-        }
-
-        function deleteStoreImageFallback(imageId, csrfToken) {
-            // Fallback method using POST for servers that block DELETE
-            return fetch(`/api/store-images/${imageId}/delete`, {
-                method: 'POST',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                credentials: 'same-origin'
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                }
-                throw new Error('Fallback POST method also failed: ' + response.statusText);
-            });
-        }
-
         // Address search functionality
         const addressInput = document.getElementById('address');
         const searchResults = document.getElementById('search-results');
@@ -613,5 +555,12 @@
             });
         }
     });
+
+    // Image deletion function
+    function deleteImage(storeId, imageId) {
+        if (confirm('Are you sure you want to delete this image?')) {
+            document.getElementById('delete-form-' + imageId).submit();
+        }
+    }
 </script>
 @endsection

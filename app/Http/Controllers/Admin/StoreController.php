@@ -249,4 +249,42 @@ class StoreController extends Controller
 
         return response()->json(['message' => 'Image order updated successfully.']);
     }
+
+    /**
+     * Delete a store image (web route, POST)
+     */
+    public function destroyImage(Request $request, Store $store, StoreImage $storeImage)
+    {
+        Log::info('*** WEB CONTROLLER destroyImage called ***', [
+            'store_id' => $store->id,
+            'image_id' => $storeImage->id,
+            'image_path' => $storeImage->image_path,
+            'method' => $request->method(),
+            'url' => $request->url()
+        ]);
+        
+        // Ensure the image belongs to the store
+        if ($storeImage->store_id !== $store->id) {
+            Log::warning('Image does not belong to store', [
+                'image_store_id' => $storeImage->store_id,
+                'requested_store_id' => $store->id
+            ]);
+            return redirect()->back()->with('error', 'Image does not belong to this store.');
+        }
+        
+        try {
+            Log::info('About to delete image from web controller', ['image_id' => $storeImage->id]);
+            $deleted = $storeImage->delete();
+            Log::info('Image delete result from web controller', ['deleted' => $deleted, 'image_id' => $storeImage->id]);
+            
+            return redirect()->route('admin.stores.edit', $store)
+                ->with('success', 'Image deleted successfully.');
+        } catch (\Exception $e) {
+            Log::error('Error deleting store image via web', [
+                'image_id' => $storeImage->id,
+                'error' => $e->getMessage()
+            ]);
+            return redirect()->back()->with('error', 'Failed to delete image.');
+        }
+    }
 }

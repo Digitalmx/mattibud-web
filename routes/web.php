@@ -39,6 +39,6 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('users', UserController::class);
         Route::post('stores/{store}/update-image-order', [StoreController::class, 'updateImageOrder'])->name('stores.updateImageOrder');
         // Replace DELETE route with POST route for image deletion
-        Route::post('stores/{store}/images/{image}/delete', [StoreController::class, 'destroyImage'])->name('stores.images.destroy');
+        Route::post('stores/{store}/images/{storeImage}/delete', [StoreController::class, 'destroyImage'])->name('stores.images.destroy');
     });
 });

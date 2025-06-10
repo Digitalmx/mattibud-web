@@ -60,11 +60,17 @@ class StoreImage extends Model
     protected static function booted()
     {
         static::deleting(function ($storeImage) {
+            Log::info('StoreImage deleting event fired', [
+                'image_id' => $storeImage->id,
+                'image_path' => $storeImage->image_path
+            ]);
             if (!is_null($storeImage->image_path)) {
                 try {
-                    // Check if file exists before deleting
-                    if (Storage::disk('public')->exists($storeImage->image_path)) {
-                        Storage::disk('public')->delete($storeImage->image_path);
+                    $exists = Storage::disk('public')->exists($storeImage->image_path);
+                    Log::info('File exists before delete', ['exists' => $exists, 'path' => $storeImage->image_path]);
+                    if ($exists) {
+                        $deleted = Storage::disk('public')->delete($storeImage->image_path);
+                        Log::info('File delete attempted', ['deleted' => $deleted, 'path' => $storeImage->image_path]);
                     } else {
                         Log::warning("File not found: {$storeImage->image_path}");
                     }
