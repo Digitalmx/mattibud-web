@@ -23,8 +23,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Name</th>
-                            <th>Address</th>
-                            <th>City</th>
+                            <th>Place</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -34,7 +33,6 @@
                                 <td>{{ $store->id }}</td>
                                 <td>{{ $store->name }}</td>
                                 <td>{{ $store->address ?: 'N/A' }}</td>
-                                <td>{{ $store->city ?: 'N/A' }}</td>
                                 <td>
                                     <div class="d-flex">
                                         <a href="{{ route('admin.stores.show', $store) }}" class="btn btn-info btn-sm me-1">
@@ -55,7 +53,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center">No stores found.</td>
+                                <td colspan="4" class="text-center">No stores found.</td>
                             </tr>
                         @endforelse
                     </tbody>
